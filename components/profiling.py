@@ -1,6 +1,7 @@
 """
 Data Profiling Component
 Automated data quality profiling and analysis
+Integrated with backend DataProfiler module
 """
 
 import streamlit as st
@@ -9,43 +10,69 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
 
+# Import backend profiler
+from backend.data_profiler import DataProfiler
+
 def analyze_data(df):
-    """Perform comprehensive data profiling"""
+    """
+    Perform comprehensive data profiling using backend DataProfiler
     
-    profile = {
-        'basic_info': {
-            'rows': len(df),
-            'columns': len(df.columns),
-            'memory_usage': df.memory_usage(deep=True).sum() / 1024**2,  # MB
-            'duplicates': df.duplicated().sum()
-        },
-        'column_analysis': {},
-        'missing_data': {},
-        'data_types': {}
-    }
-    
-    # Analyze each column
-    for col in df.columns:
-        col_data = df[col]
+    Args:
+        df: pandas DataFrame to profile
         
-        profile['column_analysis'][col] = {
-            'dtype': str(col_data.dtype),
-            'unique_values': col_data.nunique(),
-            'missing_count': col_data.isnull().sum(),
-            'missing_percent': (col_data.isnull().sum() / len(df)) * 100
+    Returns:
+        dict: Profile results in UI-compatible format
+    """
+    try:
+        # Use backend DataProfiler
+        profiler = DataProfiler()
+        result = profiler.profile_dataset(df)
+        
+        if not result['success']:
+            st.error(f"❌ Profiling failed: {result.get('error', 'Unknown error')}")
+            return None
+        
+        # Convert backend format to UI format
+        backend_profile = result['profile']
+        
+        # Transform to match UI expectations
+        profile = {
+            'basic_info': {
+                'rows': backend_profile['row_count'],
+                'columns': backend_profile['column_count'],
+                'memory_usage': backend_profile['memory_usage_mb'],
+                'duplicates': backend_profile['duplicate_count']
+            },
+            'column_analysis': {},
+            'missing_data': backend_profile.get('missing_values', {}),
+            'data_types': backend_profile.get('data_types', {})
         }
         
-        # Numeric column analysis
-        if pd.api.types.is_numeric_dtype(col_data):
-            profile['column_analysis'][col].update({
-                'min': col_data.min(),
-                'max': col_data.max(),
-                'mean': col_data.mean(),
-                'median': col_data.median(),
-                'std': col_data.std()
-            })
-    
-    return profile
+        # Convert column details to UI format
+        for col_name, col_info in backend_profile.get('columns', {}).items():
+            profile['column_analysis'][col_name] = {
+                'dtype': col_info.get('dtype', 'unknown'),
+                'unique_values': col_info.get('unique_count', 0),
+                'missing_count': col_info.get('missing_count', 0),
+                'missing_percent': col_info.get('missing_percent', 0.0)
+            }
+            
+            # Add numeric statistics if available
+            if col_info.get('is_numeric', False):
+                stats = col_info.get('statistics', {})
+                profile['column_analysis'][col_name].update({
+                    'min': stats.get('min', 0),
+                    'max': stats.get('max', 0),
+                    'mean': stats.get('mean', 0),
+                    'median': stats.get('median', 0),
+                    'std': stats.get('std', 0)
+                })
+        
+        return profile
+        
+    except Exception as e:
+        st.error(f"❌ Error during profiling: {str(e)}")
+        return None
 
 def render_profiling_component():
     """Render data profiling interface"""
@@ -66,6 +93,12 @@ def render_profiling_component():
     # Run profiling
     with st.spinner("🔄 Analyzing data..."):
         profile = analyze_data(df)
+        
+        # Check if profiling was successful
+        if profile is None:
+            st.error("❌ Profiling failed. Please check your data and try again.")
+            return
+        
         st.session_state.profiling_results = profile
     
     # Display results
