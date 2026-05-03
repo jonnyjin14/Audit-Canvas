@@ -43,27 +43,36 @@ def perform_reconciliation(source_df, target_df, key_column=None):
         
         result = engine.reconcile_datasets(source_df, target_df, key_columns)
         
-        if not result['success']:
-            st.error(f"❌ Reconciliation failed: {result.get('error', 'Unknown error')}")
+        # Backend returns results directly (no 'success' wrapper)
+        if result is None:
+            st.error("❌ Reconciliation failed: Unknown error")
             return None
         
         # Convert backend format to UI format
         backend_results = result
         
+        # Extract nested data from backend structure
+        col_comparison = backend_results.get('column_comparison', {})
+        record_counts = backend_results.get('record_counts', {})
+        missing_records = backend_results.get('missing_records', {})
+        extra_records = backend_results.get('extra_records', {})
+        
         # Transform to match UI expectations
         ui_results = {
             'timestamp': datetime.now(),
-            'source_rows': len(source_df),
-            'target_rows': len(target_df),
-            'row_difference': len(source_df) - len(target_df),
-            'source_columns': list(source_df.columns),
-            'target_columns': list(target_df.columns),
-            'common_columns': backend_results.get('common_columns', []),
-            'missing_in_target': backend_results.get('missing_in_target', []),
-            'missing_in_source': backend_results.get('extra_in_target', []),
+            'source_rows': record_counts.get('source_count', len(source_df)),
+            'target_rows': record_counts.get('target_count', len(target_df)),
+            'row_difference': record_counts.get('difference', len(source_df) - len(target_df)),
+            'source_columns': col_comparison.get('source_columns', list(source_df.columns)),
+            'target_columns': col_comparison.get('target_columns', list(target_df.columns)),
+            'common_columns': col_comparison.get('common_columns', []),
+            'missing_in_target': col_comparison.get('missing_in_target', []),
+            'missing_in_source': col_comparison.get('extra_in_target', []),
             'column_mapping': {},
-            'data_differences': backend_results.get('value_differences', []),
-            'key_column': key_column
+            'data_differences': backend_results.get('value_differences', {}),
+            'key_column': key_column,
+            'missing_records_count': missing_records.get('count', 0),
+            'extra_records_count': extra_records.get('count', 0)
         }
         
         # Build column mapping from common columns

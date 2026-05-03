@@ -24,10 +24,26 @@ def run_quality_checks(df):
     try:
         # Use backend QualityEngine
         engine = QualityEngine()
+        
+        # Add default quality rules if none exist
+        if len(engine.rules) == 0:
+            from backend.quality_engine import RequiredFieldsRule, UniquePrimaryKeyRule
+            
+            # Add basic rules for common columns
+            if 'transaction_id' in df.columns:
+                engine.add_rule(RequiredFieldsRule(['transaction_id'], severity='critical'))
+                engine.add_rule(UniquePrimaryKeyRule(['transaction_id'], severity='critical'))
+            
+            # Add required fields rule for all non-null columns
+            non_null_cols = [col for col in df.columns if df[col].notna().all()]
+            if non_null_cols:
+                engine.add_rule(RequiredFieldsRule(non_null_cols[:3], severity='high'))
+        
         result = engine.run_quality_checks(df)
         
-        if not result['success']:
-            st.error(f"❌ Quality checks failed: {result.get('error', 'Unknown error')}")
+        # Backend returns results directly (no 'success' wrapper)
+        if result is None:
+            st.error("❌ Quality checks failed: Unknown error")
             return None
         
         # Convert backend format to UI format
@@ -37,31 +53,42 @@ def run_quality_checks(df):
         ui_results = {
             'timestamp': datetime.now(),
             'checks': [],
-            'passed': backend_results.get('summary', {}).get('passed', 0),
-            'failed': backend_results.get('summary', {}).get('failed', 0),
-            'warnings': backend_results.get('summary', {}).get('warnings', 0)
+            'passed': backend_results.get('rules_passed', 0),
+            'failed': backend_results.get('rules_failed', 0),
+            'warnings': 0,
+            'total_rules': backend_results.get('total_rules', 0),
+            'pass_rate': backend_results.get('overall_pass_rate', 0)
         }
         
         # Convert rule results to UI format
-        for rule_result in backend_results.get('results', []):
-            status = rule_result.get('status', 'unknown').title()
+        for rule_result in backend_results.get('rule_results', []):
+            passed = rule_result.get('passed', False)
             
             # Map status to UI format
-            if status == 'Pass':
+            if passed:
                 status = 'Passed'
-                severity = 'Low'
-            elif status == 'Fail':
-                status = 'Failed'
-                severity = rule_result.get('severity', 'High')
             else:
-                status = 'Warning'
-                severity = 'Medium'
+                status = 'Failed'
+            
+            severity = rule_result.get('severity', 'medium').title()
+            
+            # Build message from rule result
+            message = f"{rule_result.get('rule_name', 'Unknown Rule')}"
+            if not passed:
+                if 'total_violations' in rule_result:
+                    message += f" - {rule_result['total_violations']} violations found"
+                elif 'duplicate_count' in rule_result:
+                    message += f" - {rule_result['duplicate_count']} duplicates found"
+                elif 'orphaned_count' in rule_result:
+                    message += f" - {rule_result['orphaned_count']} orphaned records"
+                elif 'error' in rule_result:
+                    message += f" - Error: {rule_result['error']}"
             
             ui_results['checks'].append({
-                'check': rule_result.get('rule', 'Unknown Rule'),
-                'column': rule_result.get('column', 'All'),
+                'check': rule_result.get('rule_name', 'Unknown Rule'),
+                'column': 'Multiple' if 'violations' in rule_result else 'All',
                 'status': status,
-                'message': rule_result.get('message', 'No message'),
+                'message': message,
                 'severity': severity
             })
         

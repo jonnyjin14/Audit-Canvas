@@ -28,45 +28,34 @@ def analyze_data(df):
         profiler = DataProfiler()
         result = profiler.profile_dataset(df)
         
-        if not result['success']:
-            st.error(f"❌ Profiling failed: {result.get('error', 'Unknown error')}")
+        # Backend returns results directly (no 'success' wrapper)
+        if result is None:
+            st.error("❌ Profiling failed: Unknown error")
             return None
         
-        # Convert backend format to UI format
-        backend_profile = result['profile']
+        # Extract data from backend structure
+        basic_stats = result.get('basic_stats', {})
+        missing_values = result.get('missing_values', {})
+        duplicates = result.get('duplicates', {})
+        data_types = result.get('data_types', {})
         
         # Transform to match UI expectations
         profile = {
             'basic_info': {
-                'rows': backend_profile['row_count'],
-                'columns': backend_profile['column_count'],
-                'memory_usage': backend_profile['memory_usage_mb'],
-                'duplicates': backend_profile['duplicate_count']
+                'rows': basic_stats.get('row_count', len(df)),
+                'columns': basic_stats.get('column_count', len(df.columns)),
+                'memory_usage': basic_stats.get('memory_usage_mb', 0),
+                'duplicates': duplicates.get('duplicate_count', 0)
             },
-            'column_analysis': {},
-            'missing_data': backend_profile.get('missing_values', {}),
-            'data_types': backend_profile.get('data_types', {})
+            'column_analysis': result.get('column_details', {}),
+            'missing_data': missing_values,
+            'data_types': data_types,
+            'numeric_stats': result.get('numeric_stats', {}),
+            'outliers': result.get('outliers', {})
         }
         
-        # Convert column details to UI format
-        for col_name, col_info in backend_profile.get('columns', {}).items():
-            profile['column_analysis'][col_name] = {
-                'dtype': col_info.get('dtype', 'unknown'),
-                'unique_values': col_info.get('unique_count', 0),
-                'missing_count': col_info.get('missing_count', 0),
-                'missing_percent': col_info.get('missing_percent', 0.0)
-            }
-            
-            # Add numeric statistics if available
-            if col_info.get('is_numeric', False):
-                stats = col_info.get('statistics', {})
-                profile['column_analysis'][col_name].update({
-                    'min': stats.get('min', 0),
-                    'max': stats.get('max', 0),
-                    'mean': stats.get('mean', 0),
-                    'median': stats.get('median', 0),
-                    'std': stats.get('std', 0)
-                })
+        # Column details are already in the profile
+        # No additional conversion needed since backend returns complete structure
         
         return profile
         
@@ -123,11 +112,14 @@ def render_profiling_component():
     
     missing_data = []
     for col, info in profile['column_analysis'].items():
-        if info['missing_count'] > 0:
+        null_count = info.get('null_count', 0)
+        if null_count > 0:
+            total_rows = profile['basic_info']['rows']
+            missing_percent = (null_count / total_rows * 100) if total_rows > 0 else 0
             missing_data.append({
                 'Column': col,
-                'Missing Count': info['missing_count'],
-                'Missing %': f"{info['missing_percent']:.2f}%"
+                'Missing Count': null_count,
+                'Missing %': f"{missing_percent:.2f}%"
             })
     
     if missing_data:
@@ -153,12 +145,16 @@ def render_profiling_component():
     
     col_details = []
     for col, info in profile['column_analysis'].items():
+        null_count = info.get('null_count', 0)
+        total_rows = profile['basic_info']['rows']
+        missing_percent = (null_count / total_rows * 100) if total_rows > 0 else 0
+        
         col_details.append({
             'Column': col,
-            'Type': info['dtype'],
-            'Unique Values': info['unique_values'],
-            'Missing': info['missing_count'],
-            'Missing %': f"{info['missing_percent']:.2f}%"
+            'Type': info.get('data_type', 'unknown'),
+            'Unique Values': info.get('unique_count', 0),
+            'Missing': null_count,
+            'Missing %': f"{missing_percent:.2f}%"
         })
     
     col_df = pd.DataFrame(col_details)
@@ -214,7 +210,7 @@ def render_profiling_component():
     
     # Calculate quality score
     total_cells = profile['basic_info']['rows'] * profile['basic_info']['columns']
-    missing_cells = sum(info['missing_count'] for info in profile['column_analysis'].values())
+    missing_cells = sum(info.get('null_count', 0) for info in profile['column_analysis'].values())
     completeness = ((total_cells - missing_cells) / total_cells) * 100 if total_cells > 0 else 0
     
     duplicate_score = 100 - (profile['basic_info']['duplicates'] / profile['basic_info']['rows'] * 100)
