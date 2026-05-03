@@ -9,9 +9,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime
+import io
+import os
 
-# Import backend profiler
 from backend.data_profiler import DataProfiler
+from backend.report_generator import ReportGenerator
 
 def analyze_data(df):
     """
@@ -250,13 +252,66 @@ def render_profiling_component():
     # Export options
     st.markdown("---")
     st.subheader("💾 Export Profiling Report")
-    
+
     col1, col2 = st.columns(2)
+
     with col1:
         if st.button("📊 Export to Excel", use_container_width=True):
-            st.info("Excel export functionality coming soon!")
+            try:
+                output = io.BytesIO()
+                with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                    # Overview sheet
+                    overview = pd.DataFrame([{
+                        'Metric': k, 'Value': v
+                    } for k, v in profile['basic_info'].items()])
+                    overview.to_excel(writer, sheet_name='Overview', index=False)
+
+                    # Column analysis sheet
+                    col_rows = []
+                    for col_name, info in profile['column_analysis'].items():
+                        row = {'Column': col_name}
+                        row.update(info)
+                        col_rows.append(row)
+                    if col_rows:
+                        pd.DataFrame(col_rows).to_excel(writer, sheet_name='Column Analysis', index=False)
+
+                output.seek(0)
+                st.download_button(
+                    label="💾 Save Excel File",
+                    data=output,
+                    file_name=f"profiling_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    use_container_width=True
+                )
+                st.success("✅ Excel report ready!")
+            except Exception as e:
+                st.error(f"❌ Excel export failed: {str(e)}")
+
     with col2:
         if st.button("📄 Generate PDF Report", use_container_width=True):
-            st.info("PDF export functionality coming soon!")
+            try:
+                generator = ReportGenerator()
+                tmp_path = f"temp_profiling_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                result = generator.generate_pdf_report(
+                    output_path=tmp_path,
+                    profile_results=profile,
+                    title="Data Profiling Report"
+                )
+                if result['success']:
+                    with open(tmp_path, 'rb') as f:
+                        pdf_data = f.read()
+                    os.remove(tmp_path)
+                    st.download_button(
+                        label="💾 Save PDF Report",
+                        data=pdf_data,
+                        file_name=f"profiling_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ PDF report ready!")
+                else:
+                    st.error(f"❌ PDF generation failed: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                st.error(f"❌ PDF export failed: {str(e)}")
 
 # Made with Bob

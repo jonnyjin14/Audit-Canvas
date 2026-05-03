@@ -8,9 +8,10 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 import io
+import os
 
-# Import backend report generator
 from backend.report_generator import ReportGenerator
+from backend.ai_integration import IBMBobIntegration
 
 def generate_excel_report(source_df, profiling_results, quality_results, reconciliation_results):
     """
@@ -214,9 +215,45 @@ def render_reports_component():
     with col2:
         st.markdown("### 📄 PDF Report")
         st.markdown("Professional formatted document")
-        
+
         if st.button("📥 Download PDF", use_container_width=True):
-            st.info("PDF export functionality coming soon!")
+            try:
+                generator = ReportGenerator()
+                tmp_path = f"temp_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+
+                # Normalise profiling results to backend shape for PDF generator
+                prof = st.session_state.profiling_results if include_profiling else None
+                if prof:
+                    prof_for_pdf = {
+                        'basic_info': prof.get('basic_info', {}),
+                        'column_analysis': prof.get('column_analysis', {}),
+                    }
+                else:
+                    prof_for_pdf = None
+
+                result = generator.generate_pdf_report(
+                    output_path=tmp_path,
+                    profile_results=prof_for_pdf,
+                    quality_results=st.session_state.quality_results if include_quality else None,
+                    reconciliation_results=st.session_state.reconciliation_results if include_reconciliation else None,
+                    title=report_title
+                )
+                if result['success']:
+                    with open(tmp_path, 'rb') as f:
+                        pdf_data = f.read()
+                    os.remove(tmp_path)
+                    st.download_button(
+                        label="💾 Save PDF Report",
+                        data=pdf_data,
+                        file_name=f"audit_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        use_container_width=True
+                    )
+                    st.success("✅ PDF report ready!")
+                else:
+                    st.error(f"❌ PDF generation failed: {result.get('error', 'Unknown error')}")
+            except Exception as e:
+                st.error(f"❌ PDF export failed: {str(e)}")
     
     with col3:
         st.markdown("### 📋 CSV Export")
@@ -233,10 +270,42 @@ def render_reports_component():
             )
             st.success("✅ CSV file ready for download!")
     
+    # AI Findings
+    st.markdown("---")
+    st.subheader("🤖 AI-Generated Audit Findings")
+    st.markdown("Automated findings based on your analysis results.")
+
+    if st.button("✨ Generate AI Findings", use_container_width=True, type="primary"):
+        prof = st.session_state.profiling_results
+        qual = st.session_state.quality_results
+        if not prof and not qual:
+            st.warning("⚠️ Run profiling or quality checks first to generate findings.")
+        else:
+            with st.spinner("Analysing results..."):
+                ai = IBMBobIntegration()
+                # Use fallback findings (no external API key required)
+                findings = ai._generate_fallback_findings(
+                    profile_results=prof or {},
+                    quality_results=qual or {},
+                    reconciliation_results=st.session_state.reconciliation_results
+                )
+
+            if findings:
+                severity_colors = {'high': '🔴', 'medium': '🟡', 'low': '🟢'}
+                for finding in findings:
+                    sev = finding.get('severity', 'low')
+                    icon = severity_colors.get(sev, '⚪')
+                    with st.expander(f"{icon} [{sev.upper()}] {finding.get('title', 'Finding')}"):
+                        st.markdown(f"**Category:** {finding.get('category', '').replace('_', ' ').title()}")
+                        st.markdown(f"**Description:** {finding.get('description', '')}")
+                        st.markdown(f"**Recommendation:** {finding.get('recommendation', '')}")
+            else:
+                st.success("✅ No issues detected — data looks clean!")
+
     # Report history
     st.markdown("---")
     st.subheader("📚 Report History")
-    
+
     st.info("No previous reports. Generate your first report above!")
     
     # Report templates
