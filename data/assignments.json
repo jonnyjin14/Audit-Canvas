@@ -1,0 +1,72 @@
+{
+  "ASGN_a5867b9b": {
+    "assignment_id": "ASGN_a5867b9b",
+    "item_id": "ITEM_eca54c22",
+    "coordinator_username": "coordinator3",
+    "assigned_by": "auditor",
+    "assigned_at": "2026-05-02T21:23:43.143944"
+  },
+  "ASGN_c2d183b3": {
+    "assignment_id": "ASGN_c2d183b3",
+    "item_id": "ITEM_f31dd598",
+    "coordinator_username": "coordinator1",
+    "assigned_by": "auditor",
+    "assigned_at": "2026-05-02T21:23:43.154574"
+  },
+  "ASGN_4f13c843": {
+    "assignment_id": "ASGN_4f13c843",
+    "item_id": "ITEM_bcadefd5",
+    "coordinator_username": "coordinator2",
+    "assigned_by": "auditor",
+    "assigned_at": "2026-05-02T21:23:43.171933"
+  },
+  "ASGN_d0ac86ba": {
+    "assignment_id": "ASGN_d0ac86ba",
+    "item_id": "ITEM_6cb0bdb5",
+    "coordinator_username": "coordinator2",
+    "assigned_by": "auditor",
+    "assigned_at": "2026-05-02T21:23:43.184490"
+  },
+  "ASGN_41c3accc": {
+    "assignment_id": "ASGN_41c3accc",
+    "item_id": "ITEM_952d1486",
+    "coordinator_username": "coordinator3",
+    "assigned_by": "auditor",
+    "assigned_at": "2026-05-02T21:23:43.196189"
+  },
+  "ASGN_9916c0ff": {
+    "assignment_id": "ASGN_9916c0ff",
+    "item_id": "ITEM_5ebb36ee",
+    "coordinator_username": "coordinator1",
+    "assigned_by": "auditor2",
+    "assigned_at": "2026-05-02T21:23:43.213629"
+  },
+  "ASGN_e35e8dd0": {
+    "assignment_id": "ASGN_e35e8dd0",
+    "item_id": "ITEM_5ebb36ee",
+    "coordinator_username": "coordinator3",
+    "assigned_by": "auditor2",
+    "assigned_at": "2026-05-02T21:23:43.219561"
+  },
+  "ASGN_25238f3b": {
+    "assignment_id": "ASGN_25238f3b",
+    "item_id": "ITEM_e01a44ab",
+    "coordinator_username": "coordinator3",
+    "assigned_by": "auditor2",
+    "assigned_at": "2026-05-02T21:23:43.230264"
+  },
+  "ASGN_4ab4b55f": {
+    "assignment_id": "ASGN_4ab4b55f",
+    "item_id": "ITEM_316231ab",
+    "coordinator_username": "coordinator2",
+    "assigned_by": "auditor2",
+    "assigned_at": "2026-05-02T21:23:43.242788"
+  },
+  "ASGN_2f9297dd": {
+    "assignment_id": "ASGN_2f9297dd",
+    "item_id": "ITEM_fa203c53",
+    "coordinator_username": "coordinator3",
+    "assigned_by": "auditor",
+    "assigned_at": "2026-05-02T22:06:25.586934"
+  }
+}

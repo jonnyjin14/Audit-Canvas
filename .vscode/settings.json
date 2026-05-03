@@ -1,0 +1,10 @@
+{
+    "python.defaultInterpreterPath": "C:\\Users\\Jin\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+    "python.analysis.extraPaths": [
+        "${workspaceFolder}"
+    ],
+    "python.analysis.typeCheckingMode": "basic",
+    "python.languageServer": "None"
+}
+
+// Made with Bob
