@@ -1,86 +1,75 @@
 """
 Data Quality Checks Component
 Automated data quality validation rules
+Integrated with backend QualityEngine module
 """
 
 import streamlit as st
 import pandas as pd
 from datetime import datetime
 
+# Import backend quality engine
+from backend.quality_engine import QualityEngine
+
 def run_quality_checks(df):
-    """Run comprehensive data quality checks"""
+    """
+    Run comprehensive data quality checks using backend QualityEngine
     
-    results = {
-        'timestamp': datetime.now(),
-        'checks': [],
-        'passed': 0,
-        'failed': 0,
-        'warnings': 0
-    }
-    
-    # Check 1: Required fields (no nulls)
-    for col in df.columns:
-        null_count = df[col].isnull().sum()
-        if null_count > 0:
-            results['checks'].append({
-                'check': 'Required Fields',
-                'column': col,
-                'status': 'Failed',
-                'message': f'{null_count} null values found',
-                'severity': 'High'
-            })
-            results['failed'] += 1
-        else:
-            results['checks'].append({
-                'check': 'Required Fields',
-                'column': col,
-                'status': 'Passed',
-                'message': 'No null values',
-                'severity': 'Low'
-            })
-            results['passed'] += 1
-    
-    # Check 2: Duplicate detection
-    duplicate_count = df.duplicated().sum()
-    if duplicate_count > 0:
-        results['checks'].append({
-            'check': 'Duplicate Records',
-            'column': 'All',
-            'status': 'Warning',
-            'message': f'{duplicate_count} duplicate rows found',
-            'severity': 'Medium'
-        })
-        results['warnings'] += 1
-    else:
-        results['checks'].append({
-            'check': 'Duplicate Records',
-            'column': 'All',
-            'status': 'Passed',
-            'message': 'No duplicates found',
-            'severity': 'Low'
-        })
-        results['passed'] += 1
-    
-    # Check 3: Data type consistency
-    for col in df.columns:
-        if pd.api.types.is_numeric_dtype(df[col]):
-            # Check for outliers using IQR method
-            Q1 = df[col].quantile(0.25)
-            Q3 = df[col].quantile(0.75)
-            IQR = Q3 - Q1
-            outliers = ((df[col] < (Q1 - 1.5 * IQR)) | (df[col] > (Q3 + 1.5 * IQR))).sum()
+    Args:
+        df: pandas DataFrame to validate
+        
+    Returns:
+        dict: Quality check results in UI-compatible format
+    """
+    try:
+        # Use backend QualityEngine
+        engine = QualityEngine()
+        result = engine.run_quality_checks(df)
+        
+        if not result['success']:
+            st.error(f"❌ Quality checks failed: {result.get('error', 'Unknown error')}")
+            return None
+        
+        # Convert backend format to UI format
+        backend_results = result
+        
+        # Transform to match UI expectations
+        ui_results = {
+            'timestamp': datetime.now(),
+            'checks': [],
+            'passed': backend_results.get('summary', {}).get('passed', 0),
+            'failed': backend_results.get('summary', {}).get('failed', 0),
+            'warnings': backend_results.get('summary', {}).get('warnings', 0)
+        }
+        
+        # Convert rule results to UI format
+        for rule_result in backend_results.get('results', []):
+            status = rule_result.get('status', 'unknown').title()
             
-            if outliers > 0:
-                results['checks'].append({
-                    'check': 'Outlier Detection',
-                    'column': col,
-                    'status': 'Warning',
-                    'message': f'{outliers} potential outliers detected',
-                    'severity': 'Medium'
-                })
-                results['warnings'] += 1
-    
-    return results
+            # Map status to UI format
+            if status == 'Pass':
+                status = 'Passed'
+                severity = 'Low'
+            elif status == 'Fail':
+                status = 'Failed'
+                severity = rule_result.get('severity', 'High')
+            else:
+                status = 'Warning'
+                severity = 'Medium'
+            
+            ui_results['checks'].append({
+                'check': rule_result.get('rule', 'Unknown Rule'),
+                'column': rule_result.get('column', 'All'),
+                'status': status,
+                'message': rule_result.get('message', 'No message'),
+                'severity': severity
+            })
+        
+        return ui_results
+        
+    except Exception as e:
+        st.error(f"❌ Error during quality checks: {str(e)}")
+        return None
 
 def render_quality_component():
     """Render data quality checks interface"""
@@ -116,6 +105,12 @@ def render_quality_component():
     if st.button("🔍 Run Quality Checks", type="primary", use_container_width=True):
         with st.spinner("🔄 Running quality checks..."):
             results = run_quality_checks(df)
+            
+            # Check if quality checks were successful
+            if results is None:
+                st.error("❌ Quality checks failed. Please check your data and try again.")
+                return
+            
             st.session_state.quality_results = results
     
     # Display results if available
