@@ -1,0 +1,132 @@
+{
+  "ITEM_dd52200b": {
+    "item_id": "ITEM_dd52200b",
+    "project_id": "PRJ_bf7404ec",
+    "title": "Revenue Recognition Analysis",
+    "description": "Review revenue recognition policies and validate Q4 revenue transactions. Ensure compliance with ASC 606 standards.",
+    "due_date": "2026-05-09",
+    "status": "in_progress",
+    "created_at": "2026-05-02T21:23:43.098169",
+    "updated_at": "2026-05-02T21:23:43.098169"
+  },
+  "ITEM_e29b05e5": {
+    "item_id": "ITEM_e29b05e5",
+    "project_id": "PRJ_bf7404ec",
+    "title": "Expense Validation",
+    "description": "Validate all Q4 operating expenses, verify proper authorization and documentation for expenses over $10,000.",
+    "due_date": "2026-05-12",
+    "status": "returned",
+    "created_at": "2026-05-02T21:23:43.120191",
+    "updated_at": "2026-05-02T21:54:44.236085"
+  },
+  "ITEM_eca54c22": {
+    "item_id": "ITEM_eca54c22",
+    "project_id": "PRJ_bf7404ec",
+    "title": "IT Systems Access Review",
+    "description": "Review user access rights to financial systems, identify and remove unnecessary privileges, document all administrative accounts.",
+    "due_date": "2026-05-07",
+    "status": "returned",
+    "created_at": "2026-05-02T21:23:43.137176",
+    "updated_at": "2026-05-02T22:10:00.734318"
+  },
+  "ITEM_f31dd598": {
+    "item_id": "ITEM_f31dd598",
+    "project_id": "PRJ_bf7404ec",
+    "title": "Accounts Receivable Aging",
+    "description": "Analyze AR aging report, identify overdue accounts, verify collection procedures are being followed.",
+    "due_date": "2026-05-16",
+    "status": "in_progress",
+    "created_at": "2026-05-02T21:23:43.148465",
+    "updated_at": "2026-05-02T21:41:18.347743"
+  },
+  "ITEM_bcadefd5": {
+    "item_id": "ITEM_bcadefd5",
+    "project_id": "PRJ_261a2ae9",
+    "title": "Supply Chain Process Documentation",
+    "description": "Document current supply chain processes, identify bottlenecks, and recommend improvements for efficiency.",
+    "due_date": "2026-05-14",
+    "status": "in_progress",
+    "created_at": "2026-05-02T21:23:43.164989",
+    "updated_at": "2026-05-02T21:23:43.164989"
+  },
+  "ITEM_6cb0bdb5": {
+    "item_id": "ITEM_6cb0bdb5",
+    "project_id": "PRJ_261a2ae9",
+    "title": "Inventory Management Review",
+    "description": "Review inventory levels, turnover rates, and storage costs. Identify slow-moving items and optimization opportunities.",
+    "due_date": "2026-05-10",
+    "status": "pending",
+    "created_at": "2026-05-02T21:23:43.178431",
+    "updated_at": "2026-05-02T21:23:43.178431"
+  },
+  "ITEM_952d1486": {
+    "item_id": "ITEM_952d1486",
+    "project_id": "PRJ_261a2ae9",
+    "title": "IT Infrastructure Assessment",
+    "description": "Assess current IT infrastructure capacity, identify upgrade needs, and evaluate cloud migration opportunities.",
+    "due_date": "2026-05-17",
+    "status": "in_progress",
+    "created_at": "2026-05-02T21:23:43.189192",
+    "updated_at": "2026-05-02T22:08:59.676773"
+  },
+  "ITEM_5ebb36ee": {
+    "item_id": "ITEM_5ebb36ee",
+    "project_id": "PRJ_aa8a37af",
+    "title": "SOX Controls Testing",
+    "description": "Test key SOX controls for financial reporting, document results, and identify any control deficiencies.",
+    "due_date": "2026-04-30",
+    "status": "in_progress",
+    "created_at": "2026-05-02T21:23:43.207319",
+    "updated_at": "2026-05-02T21:23:43.207319"
+  },
+  "ITEM_e01a44ab": {
+    "item_id": "ITEM_e01a44ab",
+    "project_id": "PRJ_aa8a37af",
+    "title": "Data Privacy Compliance Check",
+    "description": "Verify GDPR and CCPA compliance, review data handling procedures, and assess privacy policy adequacy.",
+    "due_date": "2026-05-08",
+    "status": "in_progress",
+    "created_at": "2026-05-02T21:23:43.224737",
+    "updated_at": "2026-05-02T22:08:50.645533"
+  },
+  "ITEM_316231ab": {
+    "item_id": "ITEM_316231ab",
+    "project_id": "PRJ_aa8a37af",
+    "title": "Vendor Compliance Review",
+    "description": "Review vendor contracts for compliance clauses, verify vendor certifications, and assess third-party risk.",
+    "due_date": "2026-05-22",
+    "status": "pending",
+    "created_at": "2026-05-02T21:23:43.236201",
+    "updated_at": "2026-05-02T21:23:43.236201"
+  },
+  "ITEM_cc459db1": {
+    "item_id": "ITEM_cc459db1",
+    "project_id": "PRJ_90448d11",
+    "title": "test1",
+    "description": "test2",
+    "due_date": "2026-05-16",
+    "status": "pending",
+    "created_at": "2026-05-02T21:42:33.822714",
+    "updated_at": "2026-05-02T21:42:33.822714"
+  },
+  "ITEM_2731befa": {
+    "item_id": "ITEM_2731befa",
+    "project_id": "PRJ_90448d11",
+    "title": "test2",
+    "description": "Need test2",
+    "due_date": "2026-05-16",
+    "status": "pending",
+    "created_at": "2026-05-02T21:49:02.865855",
+    "updated_at": "2026-05-02T21:49:02.865855"
+  },
+  "ITEM_fa203c53": {
+    "item_id": "ITEM_fa203c53",
+    "project_id": "PRJ_bf7404ec",
+    "title": "audit omar",
+    "description": "test w oamr ",
+    "due_date": "2026-05-16",
+    "status": "in_progress",
+    "created_at": "2026-05-02T22:06:25.585821",
+    "updated_at": "2026-05-02T22:06:25.585821"
+  }
+}

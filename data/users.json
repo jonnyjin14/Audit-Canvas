@@ -1,0 +1,20 @@
+{
+  "coordinator1": {
+    "username": "coordinator1",
+    "role": "coordinator",
+    "group": "Finance",
+    "created_at": "2026-05-02T21:23:30.034462"
+  },
+  "coordinator2": {
+    "username": "coordinator2",
+    "role": "coordinator",
+    "group": "Operations",
+    "created_at": "2026-05-02T21:23:43.090507"
+  },
+  "coordinator3": {
+    "username": "coordinator3",
+    "role": "coordinator",
+    "group": "IT",
+    "created_at": "2026-05-02T21:23:43.097146"
+  }
+}
