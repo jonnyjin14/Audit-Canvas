@@ -1,6 +1,7 @@
 """
 Reports Component
 Generate and export audit reports
+Integrated with backend report_generator module
 """
 
 import streamlit as st
@@ -8,9 +9,59 @@ import pandas as pd
 from datetime import datetime
 import io
 
+# Import backend report generator
+from backend.report_generator import ReportGenerator
+
 def generate_excel_report(source_df, profiling_results, quality_results, reconciliation_results):
-    """Generate comprehensive Excel report"""
+    """
+    Generate comprehensive Excel report using backend report generator
     
+    Args:
+        source_df: Source pandas DataFrame
+        profiling_results: Profiling analysis results
+        quality_results: Quality check results
+        reconciliation_results: Reconciliation results
+        
+    Returns:
+        BytesIO: Excel file data or None if failed
+    """
+    try:
+        # Use backend report generator
+        generator = ReportGenerator()
+        output_path = f"temp_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
+        
+        result = generator.generate_excel_report(
+            output_path=output_path,
+            profile_results=profiling_results,
+            quality_results=quality_results,
+            reconciliation_results=reconciliation_results,
+            source_df=source_df
+        )
+        
+        if result['success']:
+            # Read the generated file
+            import os
+            with open(output_path, 'rb') as f:
+                excel_data = io.BytesIO(f.read())
+            
+            # Clean up temp file
+            if os.path.exists(output_path):
+                os.remove(output_path)
+            
+            return excel_data
+        else:
+            st.warning(f"⚠️ Backend report generation failed: {result.get('error', 'Unknown error')}")
+            st.info("Using fallback report generator...")
+            return generate_simple_excel_report(source_df, profiling_results, quality_results, reconciliation_results)
+            
+    except Exception as e:
+        st.warning(f"⚠️ Error with backend report generator: {str(e)}")
+        st.info("Using fallback report generator...")
+        # Fallback to simple Excel generation
+        return generate_simple_excel_report(source_df, profiling_results, quality_results, reconciliation_results)
+
+def generate_simple_excel_report(source_df, profiling_results, quality_results, reconciliation_results):
+    """Fallback simple Excel report generation"""
     output = io.BytesIO()
     
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
@@ -146,14 +197,17 @@ def render_reports_component():
                     st.session_state.reconciliation_results if include_reconciliation else None
                 )
                 
-                st.download_button(
-                    label="💾 Save Excel File",
-                    data=excel_data,
-                    file_name=f"audit_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-                st.success("✅ Excel report generated!")
+                if excel_data is not None:
+                    st.download_button(
+                        label="💾 Save Excel File",
+                        data=excel_data,
+                        file_name=f"audit_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                    st.success("✅ Excel report generated!")
+                else:
+                    st.error("❌ Failed to generate Excel report")
             except Exception as e:
                 st.error(f"❌ Error generating Excel report: {str(e)}")
     
