@@ -83,12 +83,12 @@ class ReportGenerator:
                 # Source data sheet
                 if source_df is not None:
                     source_df.to_excel(writer, sheet_name='Source Data', index=False)
-                    self._format_data_sheet(writer, 'Source Data', header_format)
-                
+                    self._format_data_sheet(writer, 'Source Data', header_format, len(source_df.columns))
+
                 # Target data sheet
                 if target_df is not None:
                     target_df.to_excel(writer, sheet_name='Target Data', index=False)
-                    self._format_data_sheet(writer, 'Target Data', header_format)
+                    self._format_data_sheet(writer, 'Target Data', header_format, len(target_df.columns))
             
             return {
                 'success': True,
@@ -282,13 +282,12 @@ class ReportGenerator:
         self,
         writer: pd.ExcelWriter,
         sheet_name: str,
-        header_format: Any
+        header_format: Any,
+        num_columns: int = 20
     ) -> None:
         """Apply formatting to data sheets"""
         worksheet = writer.sheets[sheet_name]
-        
-        # Auto-fit columns
-        for i, col in enumerate(worksheet.table.columns):
+        for i in range(num_columns):
             worksheet.set_column(i, i, 15)
     
     def _count_sheets(
@@ -315,6 +314,183 @@ class ReportGenerator:
         
         return count
     
+    def generate_pdf_report(
+        self,
+        output_path: str,
+        profile_results: Optional[Dict[str, Any]] = None,
+        quality_results: Optional[Dict[str, Any]] = None,
+        reconciliation_results: Optional[Dict[str, Any]] = None,
+        title: str = "Audit Report"
+    ) -> Dict[str, Any]:
+        """
+        Generate a PDF audit report using reportlab.
+
+        Returns:
+            Dictionary with generation status and details
+        """
+        try:
+            from reportlab.lib.pagesizes import A4
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            from reportlab.lib import colors
+            from reportlab.platypus import (
+                SimpleDocTemplate, Paragraph, Spacer, Table,
+                TableStyle, HRFlowable
+            )
+
+            doc = SimpleDocTemplate(output_path, pagesize=A4,
+                                    leftMargin=0.75*inch, rightMargin=0.75*inch,
+                                    topMargin=0.75*inch, bottomMargin=0.75*inch)
+            styles = getSampleStyleSheet()
+            story = []
+
+            heading_color = colors.HexColor('#2c3e50')
+            header_bg = colors.HexColor('#3498db')
+            row_alt = colors.HexColor('#f0f4f8')
+
+            title_style = ParagraphStyle('AuditTitle', parent=styles['Title'],
+                                         fontSize=22, textColor=heading_color)
+            h1_style = ParagraphStyle('AuditH1', parent=styles['Heading1'],
+                                      fontSize=14, textColor=heading_color)
+            normal = styles['Normal']
+
+            col_w = [3.5*inch, 2.5*inch]
+            three_col = [3*inch, 1.5*inch, 1.5*inch]
+
+            def styled_table(data, col_widths=None):
+                t = Table(data, colWidths=col_widths or col_w)
+                t.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), header_bg),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('GRID', (0, 0), (-1, -1), 0.4, colors.grey),
+                    ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, row_alt]),
+                    ('FONTSIZE', (0, 0), (-1, -1), 9),
+                    ('TOPPADDING', (0, 0), (-1, -1), 5),
+                    ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ]))
+                return t
+
+            # Title block
+            story.append(Paragraph(title, title_style))
+            story.append(Paragraph(
+                f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')} &nbsp;|&nbsp; "
+                f"{self.report_metadata['generator']} v{self.report_metadata['version']}",
+                normal
+            ))
+            story.append(Spacer(1, 0.15*inch))
+            story.append(HRFlowable(width="100%", thickness=1, color=header_bg))
+            story.append(Spacer(1, 0.2*inch))
+
+            # Data Profile section
+            if profile_results:
+                story.append(Paragraph("Data Profile Summary", h1_style))
+                basic = profile_results.get('basic_info', {})
+                missing_cells = sum(
+                    info.get('null_count', 0)
+                    for info in profile_results.get('column_analysis', {}).values()
+                )
+                total_cells = basic.get('rows', 0) * basic.get('columns', 1)
+                completeness = (
+                    f"{((total_cells - missing_cells) / total_cells * 100):.1f}%"
+                    if total_cells else 'N/A'
+                )
+                data = [
+                    ['Metric', 'Value'],
+                    ['Total Rows', f"{basic.get('rows', 0):,}"],
+                    ['Total Columns', str(basic.get('columns', 0))],
+                    ['Duplicate Rows', str(basic.get('duplicates', 0))],
+                    ['Memory Usage', f"{basic.get('memory_usage', 0):.2f} MB"],
+                    ['Completeness', completeness],
+                ]
+                story.append(styled_table(data))
+                story.append(Spacer(1, 0.2*inch))
+
+                # Columns with missing data
+                missing_cols = [
+                    (col, info.get('null_count', 0))
+                    for col, info in profile_results.get('column_analysis', {}).items()
+                    if info.get('null_count', 0) > 0
+                ]
+                if missing_cols:
+                    story.append(Paragraph("Missing Values by Column", h1_style))
+                    rows = [['Column', 'Missing Count', 'Missing %']]
+                    for col, cnt in missing_cols:
+                        pct = f"{cnt / basic.get('rows', 1) * 100:.1f}%" if basic.get('rows') else 'N/A'
+                        rows.append([col, str(cnt), pct])
+                    story.append(styled_table(rows, [3*inch, 1.5*inch, 1.5*inch]))
+                    story.append(Spacer(1, 0.2*inch))
+
+            # Quality checks section
+            if quality_results:
+                story.append(Paragraph("Quality Check Results", h1_style))
+                summary = [
+                    ['Metric', 'Value'],
+                    ['Total Rules', str(quality_results.get('total_rules', 0))],
+                    ['Rules Passed', str(quality_results.get('rules_passed', 0))],
+                    ['Rules Failed', str(quality_results.get('rules_failed', 0))],
+                    ['Pass Rate', f"{quality_results.get('overall_pass_rate', 0):.1f}%"],
+                ]
+                story.append(styled_table(summary))
+                story.append(Spacer(1, 0.1*inch))
+
+                rule_rows = [['Rule Name', 'Severity', 'Status']]
+                for rule in quality_results.get('rule_results', []):
+                    status_txt = 'PASSED' if rule.get('passed', False) else 'FAILED'
+                    rule_rows.append([
+                        rule.get('rule_name', ''),
+                        rule.get('severity', '').upper(),
+                        status_txt
+                    ])
+                if len(rule_rows) > 1:
+                    t = styled_table(rule_rows, three_col)
+                    # Colour failed rows red
+                    for i, rule in enumerate(quality_results.get('rule_results', []), start=1):
+                        if not rule.get('passed', False):
+                            t.setStyle(TableStyle([
+                                ('TEXTCOLOR', (2, i), (2, i), colors.HexColor('#e74c3c')),
+                                ('FONTNAME', (2, i), (2, i), 'Helvetica-Bold'),
+                            ]))
+                    story.append(t)
+                story.append(Spacer(1, 0.2*inch))
+
+            # Reconciliation section
+            if reconciliation_results:
+                story.append(Paragraph("Reconciliation Summary", h1_style))
+                rc = reconciliation_results.get('record_counts', {})
+                data = [
+                    ['Metric', 'Value'],
+                    ['Source Records', f"{rc.get('source_count', 0):,}"],
+                    ['Target Records', f"{rc.get('target_count', 0):,}"],
+                    ['Missing Records', str(reconciliation_results.get('missing_records', {}).get('count', 0))],
+                    ['Extra Records', str(reconciliation_results.get('extra_records', {}).get('count', 0))],
+                    ['Value Differences', str(
+                        reconciliation_results.get('value_differences', {}).get('total_differences', 0)
+                    )],
+                ]
+                story.append(styled_table(data))
+                story.append(Spacer(1, 0.2*inch))
+
+            doc.build(story)
+            return {
+                'success': True,
+                'output_path': output_path,
+                'timestamp': datetime.now().isoformat()
+            }
+
+        except ImportError:
+            return {
+                'success': False,
+                'error': 'reportlab not installed. Run: pip install reportlab',
+                'timestamp': datetime.now().isoformat()
+            }
+        except Exception as e:
+            return {
+                'success': False,
+                'error': str(e),
+                'timestamp': datetime.now().isoformat()
+            }
+
     def _build_html_report(
         self,
         profile_results: Optional[Dict[str, Any]],

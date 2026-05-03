@@ -27,6 +27,7 @@ plotly>=5.17.0             # Interactive data visualization for profiling
 # REPORT GENERATION
 # ============================================
 jinja2>=3.1.2              # HTML template rendering for reports
+reportlab>=4.0.0           # PDF report generation
 
 # ============================================
 # OPTIONAL BUT RECOMMENDED

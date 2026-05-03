@@ -8,9 +8,11 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 from datetime import datetime
+import io
+import os
 
-# Import backend reconciliation engine
 from backend.reconciliation import ReconciliationEngine
+from backend.report_generator import ReportGenerator
 
 def perform_reconciliation(source_df, target_df, key_column=None):
     """
@@ -295,13 +297,88 @@ def render_reconciliation_component():
         # Export options
         st.markdown("---")
         st.subheader("💾 Export Reconciliation Report")
-        
+
         col1, col2 = st.columns(2)
+
         with col1:
             if st.button("📊 Export to Excel", use_container_width=True):
-                st.info("Excel export functionality coming soon!")
+                try:
+                    output = io.BytesIO()
+                    with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+                        summary_rows = [
+                            {'Metric': 'Source Records', 'Value': results.get('source_rows', 0)},
+                            {'Metric': 'Target Records', 'Value': results.get('target_rows', 0)},
+                            {'Metric': 'Row Difference', 'Value': results.get('row_difference', 0)},
+                            {'Metric': 'Missing Records', 'Value': results.get('missing_records_count', 0)},
+                            {'Metric': 'Extra Records', 'Value': results.get('extra_records_count', 0)},
+                        ]
+                        pd.DataFrame(summary_rows).to_excel(writer, sheet_name='Summary', index=False)
+
+                        # Column mapping sheet
+                        col_mapping = results.get('column_mapping', {})
+                        if col_mapping:
+                            mapping_rows = [
+                                {
+                                    'Column': col,
+                                    'Source Type': info.get('source_dtype', ''),
+                                    'Target Type': info.get('target_dtype', ''),
+                                    'Type Match': info.get('dtype_match', False),
+                                    'Source Nulls': info.get('source_nulls', 0),
+                                    'Target Nulls': info.get('target_nulls', 0),
+                                }
+                                for col, info in col_mapping.items()
+                            ]
+                            pd.DataFrame(mapping_rows).to_excel(writer, sheet_name='Column Mapping', index=False)
+
+                    output.seek(0)
+                    st.download_button(
+                        label="💾 Save Excel File",
+                        data=output,
+                        file_name=f"reconciliation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx",
+                        mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        use_container_width=True
+                    )
+                    st.success("✅ Excel report ready!")
+                except Exception as e:
+                    st.error(f"❌ Excel export failed: {str(e)}")
+
         with col2:
             if st.button("📄 Generate PDF Report", use_container_width=True):
-                st.info("PDF export functionality coming soon!")
+                try:
+                    # Normalise to the shape generate_pdf_report expects
+                    recon_for_pdf = {
+                        'record_counts': {
+                            'source_count': results.get('source_rows', 0),
+                            'target_count': results.get('target_rows', 0),
+                        },
+                        'missing_records': {'count': results.get('missing_records_count', 0)},
+                        'extra_records': {'count': results.get('extra_records_count', 0)},
+                        'value_differences': {
+                            'total_differences': results.get('data_differences', {}).get('total_differences', 0)
+                        },
+                    }
+                    generator = ReportGenerator()
+                    tmp_path = f"temp_recon_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+                    result = generator.generate_pdf_report(
+                        output_path=tmp_path,
+                        reconciliation_results=recon_for_pdf,
+                        title="Reconciliation Report"
+                    )
+                    if result['success']:
+                        with open(tmp_path, 'rb') as f:
+                            pdf_data = f.read()
+                        os.remove(tmp_path)
+                        st.download_button(
+                            label="💾 Save PDF Report",
+                            data=pdf_data,
+                            file_name=f"reconciliation_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                            mime="application/pdf",
+                            use_container_width=True
+                        )
+                        st.success("✅ PDF report ready!")
+                    else:
+                        st.error(f"❌ PDF generation failed: {result.get('error', 'Unknown error')}")
+                except Exception as e:
+                    st.error(f"❌ PDF export failed: {str(e)}")
 
 # Made with Bob
