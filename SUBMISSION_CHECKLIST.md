@@ -239,7 +239,7 @@ streamlit run app.py
 
 ```
 Project: AI-Assisted Audit Platform (Audit Canvas)
-Team: [Your Team Name]
+Team: Crazy Coding
 Members: Omar (Backend), Jonny (Frontend)
 
 Description:
